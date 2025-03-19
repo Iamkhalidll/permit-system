@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install Dependencies
+        run: yarn install
+
+      - name: Generate Prisma Client
+        run: yarn prisma generate --schema src/prisma/schema.prisma
+
+      - name: Run Database Migrations
+        if: github.ref == 'refs/heads/main'
+        run: yarn prisma migrate deploy --schema src/prisma/schema.prisma
+
+      - name: Run Database Seed
+        if: github.ref == 'refs/heads/main'
+        run: yarn prisma db seed --schema src/prisma/schema.prisma
+
+      - name: Build Application
+        run: yarn build
+
+      - name: Run Tests
+        run: yarn test || true
+
+      - name: Deploy to Render
+        if: github.ref == 'refs/heads/main'
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_SERVICE_ID }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+
+      - name: Wait for Deployment
+        if: github.ref == 'refs/heads/main'
+        run: sleep 60
+
+      - name: Verify Migration Status
+        if: github.ref == 'refs/heads/main'
+        run: yarn prisma migrate status --schema src/prisma/schema.prisma
