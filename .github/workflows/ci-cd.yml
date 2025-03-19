@@ -34,9 +34,9 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: yarn prisma migrate deploy --schema src/prisma/schema.prisma
 
-      - name: Run Database Seed
-        if: github.ref == 'refs/heads/main'
-        run: yarn prisma db seed --schema src/prisma/schema.prisma
+    #   - name: Run Database Seed
+    #     if: github.ref == 'refs/heads/main'
+    #     run: yarn prisma db seed --schema src/prisma/schema.prisma
 
       - name: Build Application
         run: yarn build
